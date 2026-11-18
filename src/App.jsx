@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Desktop from './components/Desktop';
+import PortalDemoShell from './shells/enterprise/PortalDemoShell';
+import SidePanelWidget from './shells/enterprise/SidePanelWidget';
 import LoginScreen from './components/LoginScreen';
 import SetupScreen from './components/SetupScreen';
 import SessionLockModal from './components/SessionLockModal';
@@ -410,11 +412,24 @@ const App = () => {
         return <SetupScreen onActivate={handleActivate} />;
     }
 
+    const renderActiveShell = () => {
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const shellMode = params?.get('shell') || import.meta.env.VITE_UI_SHELL || 'desktop';
+
+        if (shellMode === 'portal') {
+            return <PortalDemoShell user={user} onLogout={handleLogout} config={config} />;
+        }
+        if (shellMode === 'sidepanel') {
+            return <SidePanelWidget user={user} onLogout={handleLogout} config={config} standalone />;
+        }
+        return <Desktop user={user} onLogout={handleLogout} config={config} />;
+    };
+
     return (
         <GoogleOAuthProvider clientId={config.clientId}>
             {user ? (
                 <>
-                    <Desktop user={user} onLogout={handleLogout} config={config} />
+                    {renderActiveShell()}
                     <SessionLockModal
                         isOpen={isSessionLocked}
                         user={user}
