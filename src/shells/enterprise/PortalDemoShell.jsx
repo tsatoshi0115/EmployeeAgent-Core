@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import SidePanelWidget from './SidePanelWidget';
 
+const AI_MENU_TITLE = 'EA-Core AI Agent';
+
+const AI_MENU_ITEMS = [
+  { id: 'mcp-chat', label: 'MCP Chat', icon: '💬' },
+  { id: 'knowledge-base', label: 'Knowledge Base', icon: '📚' },
+  { id: 'hide', label: 'パネル非表示', icon: '⏏' },
+];
+
 const SIDEBAR_GROUPS = [
   {
     title: '組織振替',
@@ -79,8 +87,9 @@ const CATALOG_PROVIDERS = [
  * 既存業務システム（パターン②）への EACore サイドパネル組み込みを検証・デモするためのポータルシェル。
  */
 const PortalDemoShell = ({ user, onLogout, config }) => {
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
-  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
+  // EA-Core パネルはメイン領域に表示する（右ドッキングは廃止）
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [hasPanelMounted, setHasPanelMounted] = useState(false);
   const [panelTab, setPanelTab] = useState('mcp-chat');
   const [activeMenu, setActiveMenu] = useState('トップページ');
   const [searchText, setSearchText] = useState('マウス');
@@ -88,6 +97,18 @@ const PortalDemoShell = ({ user, onLogout, config }) => {
   const openPanelWithTab = (tabId) => {
     setPanelTab(tabId);
     setIsPanelOpen(true);
+    setHasPanelMounted(true);
+    setActiveMenu(`${AI_MENU_TITLE}:${tabId}`);
+  };
+
+  const closePanel = () => {
+    setIsPanelOpen(false);
+    setActiveMenu('トップページ');
+  };
+
+  const selectHostMenu = (key) => {
+    setIsPanelOpen(false);
+    setActiveMenu(key);
   };
 
   return (
@@ -103,7 +124,7 @@ const PortalDemoShell = ({ user, onLogout, config }) => {
           </div>
           <button
             type="button"
-            onClick={() => setActiveMenu('トップページ')}
+            onClick={closePanel}
             className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1 whitespace-nowrap"
           >
             <span>🏠</span>
@@ -112,42 +133,6 @@ const PortalDemoShell = ({ user, onLogout, config }) => {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          {/* EACore Side Panel Toggle Buttons */}
-          <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 rounded-md p-0.5">
-            <button
-              type="button"
-              onClick={() => openPanelWithTab('mcp-chat')}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-                isPanelOpen && panelTab === 'mcp-chat'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'text-indigo-700 hover:bg-indigo-100'
-              }`}
-            >
-              💬 MCP Chat
-            </button>
-            <button
-              type="button"
-              onClick={() => openPanelWithTab('knowledge-base')}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-                isPanelOpen && panelTab === 'knowledge-base'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'text-indigo-700 hover:bg-indigo-100'
-              }`}
-            >
-              📚 Knowledge Base
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsPanelOpen((prev) => !prev)}
-              className="px-2 py-1 text-xs text-indigo-700 hover:bg-indigo-100 rounded"
-              title={isPanelOpen ? 'サイドパネルを閉じる' : 'サイドパネルを開く'}
-            >
-              {isPanelOpen ? 'パネル非表示' : 'パネル表示'}
-            </button>
-          </div>
-
-          <div className="h-5 w-px bg-slate-200" />
-
           <div className="text-right leading-tight hidden sm:block">
             <div className="text-[10px] text-slate-400">ログインユーザー</div>
             <div className="text-xs font-medium text-slate-700">
@@ -173,10 +158,51 @@ const PortalDemoShell = ({ user, onLogout, config }) => {
         </div>
       </header>
 
-      {/* Main Body: Left Sidebar + Host Portal Area + Right EACore SidePanel */}
+      {/* Main Body: Left Sidebar + (Host Portal Area | EA-Core AI Agent) */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* Left Navigation Sidebar */}
         <nav className="w-48 flex-none bg-[#2c3b4c] text-slate-200 overflow-y-auto text-xs select-none">
+          {/* EA-Core AI Agent Menu */}
+          <div className="border-b border-slate-600/50">
+            <div className="px-3 py-2 text-[11px] font-semibold text-indigo-200 bg-[#2a2f5a] flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-indigo-500 text-[8px] font-bold text-white">
+                EA
+              </span>
+              <span>{AI_MENU_TITLE}</span>
+            </div>
+            <ul>
+              {AI_MENU_ITEMS.map((item) => {
+                const isActive =
+                  item.id === 'hide' ? false : isPanelOpen && panelTab === item.id;
+                const isDisabled = item.id === 'hide' && !isPanelOpen;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() =>
+                        item.id === 'hide' ? closePanel() : openPanelWithTab(item.id)
+                      }
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${
+                        isActive
+                          ? 'bg-indigo-600 text-white font-medium'
+                          : isDisabled
+                            ? 'text-slate-500 cursor-default'
+                            : 'hover:bg-[#354659] text-slate-200'
+                      }`}
+                    >
+                      <span className="truncate flex items-center gap-1.5">
+                        <span>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </span>
+                      <span className="text-slate-400 text-[10px]">›</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
           {SIDEBAR_GROUPS.map((group) => (
             <div key={group.title} className="border-b border-slate-600/50">
               <div className="px-3 py-2 text-[11px] font-semibold text-slate-400 bg-[#243140]">
@@ -185,12 +211,12 @@ const PortalDemoShell = ({ user, onLogout, config }) => {
               <ul>
                 {group.items.map((item) => {
                   const key = `${group.title}:${item}`;
-                  const isActive = activeMenu === key;
+                  const isActive = !isPanelOpen && activeMenu === key;
                   return (
                     <li key={key}>
                       <button
                         type="button"
-                        onClick={() => setActiveMenu(key)}
+                        onClick={() => selectHostMenu(key)}
                         className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${
                           isActive
                             ? 'bg-[#1d2834] text-white font-medium'
@@ -209,7 +235,7 @@ const PortalDemoShell = ({ user, onLogout, config }) => {
         </nav>
 
         {/* Host System Main Workspace */}
-        <main className="flex-1 min-w-0 overflow-y-auto bg-white p-5 space-y-6">
+        <main className={`flex-1 min-w-0 overflow-y-auto bg-white p-5 space-y-6 ${isPanelOpen ? 'hidden' : ''}`}>
           {/* ToDo Status Bar */}
           <section className="border border-slate-200 rounded-md p-3 bg-slate-50/70">
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
@@ -320,22 +346,16 @@ const PortalDemoShell = ({ user, onLogout, config }) => {
           </section>
         </main>
 
-        {/* Right Docked EACore Side Panel */}
-        {isPanelOpen && (
-          <div
-            className={`flex-none h-full transition-all duration-200 ${
-              isPanelExpanded ? 'w-[680px]' : 'w-[460px]'
-            } max-w-[60vw]`}
-          >
+        {/* EA-Core AI Agent（メイン領域を置き換えて表示。一度開いたら状態保持のためマウントを維持） */}
+        {hasPanelMounted && (
+          <div className={`flex-1 min-w-0 h-full ${isPanelOpen ? 'block' : 'hidden'}`}>
             <SidePanelWidget
               user={user}
               config={config}
               onLogout={onLogout}
-              onClose={() => setIsPanelOpen(false)}
+              onClose={closePanel}
               activeTab={panelTab}
-              onTabChange={setPanelTab}
-              isExpanded={isPanelExpanded}
-              onToggleExpand={() => setIsPanelExpanded((prev) => !prev)}
+              onTabChange={(tabId) => openPanelWithTab(tabId)}
             />
           </div>
         )}
